@@ -1,0 +1,22 @@
+.root {
+	font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+	max-width: 100vw;
+	padding: 0 30px;
+}
+
+.page {
+}
+
+.page .table {
+	max-width: 100%;
+	overflow: auto;
+	margin-top: 16px;
+}
+
+.page .table h3 {
+	margin-bottom: 8px;
+}
+
+.diagrams-by-department {
+	margin-top: 24px;
+}
