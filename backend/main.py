@@ -7,10 +7,10 @@ from pydantic import BaseModel
 
 app = FastAPI()
 
-# Настройка CORS для работы с React
+# Настройка CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # URL вашего React приложения
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -20,21 +20,40 @@ app.add_middleware(
 data_store = {
     "df": None,
     "filtered_active": None,
-    "data_by_dept": {}
+    "data_by_dept": {},
+    "number_employees_by_dept": {}
 }
 
-LIMIT = 1000
-
+# Выбор конкретных столбцов
+result_columns = ['Full_Name', 'Department', 'Performance_Rating', 'Experience_Years', 'Salary_INR', 'Bonus_Amount', 'Salary + Bonus']
 
 class AnalysisResponse(BaseModel):
     initial_data: List[Dict[str, Any]]
     departments: List[str]
     department_data: Dict[str, List[Dict[str, Any]]]
+    number_employees_by_dept: Dict[str, int]
 
 
 def filter_by(column: str, value: str, dataframe: pd.DataFrame) -> pd.DataFrame:
     """Утилита для фильтрации данных"""
     return dataframe[dataframe[column] == value]
+
+# 6. МАТРИЧНАЯ СИСТЕМА
+def calculate_matrix_bonus(row):
+    rating = row['Performance_Rating']
+    exp = row['Experience_Years']
+    if rating <= 2:
+        percent = 0.05 if exp <= 2 else (0.07 if exp <= 5 else 0.08)
+    elif rating == 3:
+        percent = 0.10 if exp <= 2 else (0.12 if exp <= 5 else 0.15)
+    else:  # rating >= 4
+        percent = 0.15 if exp <= 2 else (0.20 if exp <= 5 else 0.25)
+    return row['Salary_INR'] * percent
+
+def calculate_full_bonus(row):
+    salary = row['Salary_INR']
+    bonus = row['Bonus_Amount']
+    return round(salary + bonus, 2)
 
 
 @app.post("/api/upload")
@@ -50,24 +69,27 @@ async def upload_csv(file: UploadFile = File(...)):
         df = pd.read_csv(io.BytesIO(contents))
         
         # Сохранение в хранилище
-        data_store["df"] = df
+        data_store["df"] = df.head(5)
         
         # Обработка данных
-        filtered_active = df[df['Status'] == 'Active'].head(LIMIT)
+        filtered_active = df[df['Status'] == 'Active']
         data_store["filtered_active"] = filtered_active
         
         departments = df['Department'].unique().tolist()
         data_by_dept = {}
+        number_employees_by_dept = {}
         
         for dep in departments:
             dept_data = filter_by('Department', dep, filtered_active)
             dept_data_sorted = dept_data.sort_values(
                 by='Performance_Rating', 
                 ascending=False
-            ).head(100)
+            ).head(25)
             data_by_dept[dep] = dept_data_sorted
+            number_employees_by_dept[dep] = len(dept_data)
         
         data_store["data_by_dept"] = data_by_dept
+        data_store["number_employees_by_dept"] = number_employees_by_dept
         
         return {
             "message": "Файл успешно загружен",
@@ -87,8 +109,7 @@ async def get_analysis():
     
     try:
         # Подготовка данных для отправки
-        initial_data = data_store["filtered_active"].head(5).to_dict('records')
-        
+        initial_data = data_store["df"].head(5).to_dict('records')
         departments = list(data_store["data_by_dept"].keys())
         
         department_data = {}
@@ -98,24 +119,37 @@ async def get_analysis():
         return {
             "initial_data": initial_data,
             "departments": departments,
-            "department_data": department_data
+            "department_data": department_data,
+            "number_employees_by_dept": data_store["number_employees_by_dept"]
         }
     
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Ошибка получения данных: {str(e)}")
-
-
-@app.get("/api/department/{department_name}")
-async def get_department_data(department_name: str):
-    """Endpoint для получения данных конкретного департамента"""
-    if data_store["data_by_dept"] is None or department_name not in data_store["data_by_dept"]:
-        raise HTTPException(status_code=404, detail="Департамент не найден")
     
-    dept_data = data_store["data_by_dept"][department_name]
-    return {
-        "department": department_name,
-        "data": dept_data.to_dict('records')
-    }
+
+@app.get("/api/load-more-bonus")
+async def get_more_bonus(load_with: int = 0):
+    """Endpoint для подгрузки строк с бонусом"""
+    if data_store["filtered_active"] is None:
+        raise HTTPException(status_code=400, detail="Сначала загрузите CSV файл")
+    
+    load_end = load_with + 20
+      
+    try:
+        # Получаем срез данных
+        df_slice = data_store["filtered_active"].iloc[load_with:load_end].copy()
+        df_slice['Bonus_Amount'] = round(df_slice.apply(calculate_matrix_bonus, axis=1), 2)
+        df_slice['Salary + Bonus'] = df_slice.apply(calculate_full_bonus, axis=1)
+        
+        # Выбираем нужные столбцы
+        data = df_slice[result_columns].to_dict('records')
+                
+        return {
+            "bonus_data": data,
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Ошибка получения данных: {str(e)}")
 
 
 @app.get("/api/health")

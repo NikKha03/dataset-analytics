@@ -287,20 +287,20 @@ body {
 }
 
 /* Скроллбар */
-.table-container::-webkit-scrollbar {
+.table-container::-webkit-scrollbar,
+.scroll::-webkit-scrollbar {
 	height: 8px;
+	scrollbar-width: thin;
 }
 
-.table-container::-webkit-scrollbar-track {
+.table-container::-webkit-scrollbar-track,
+.scroll::-webkit-scrollbar-track {
 	background: #f1f1f1;
-	border-radius: 10px;
+	border-radius: 8px;
 }
 
-.table-container::-webkit-scrollbar-thumb {
+.table-container::-webkit-scrollbar-thumb,
+.scroll::-webkit-scrollbar-thumb {
 	background: #667eea;
-	border-radius: 10px;
-}
-
-.table-container::-webkit-scrollbar-thumb:hover {
-	background: #764ba2;
+	border-radius: 8px;
 }

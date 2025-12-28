@@ -1,12 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Upload, FileText, TrendingUp } from 'lucide-react';
-import reactLogo from './assets/react.svg';
-import viteLogo from '/vite.svg';
 import './App.css';
 
-// const API_URL = 'http://localhost:8080/api';
-const API_URL = 'https://api.khalimendik.ru/api';
+const API_URL = 'http://localhost:8080/api';
+// const API_URL = 'https://api.khalimendik.ru/api';
 
 export default function App() {
 	const [file, setFile] = useState(null);
@@ -14,6 +12,18 @@ export default function App() {
 	const [analysisData, setAnalysisData] = useState(null);
 	const [error, setError] = useState(null);
 	const [success, setSuccess] = useState(null);
+	const [bonusData, setBonusData] = useState([]);
+	const [loadingMore, setLoadingMore] = useState(false);
+	const [hasMoreBonus, setHasMoreBonus] = useState(true);
+
+	useEffect(() => {
+		if (analysisData && bonusData.length === 0) {
+			loadMoreBonus();
+		} else if (bonusData.length !== 0) {
+			setBonusData([]);
+			loadMoreBonus();
+		}
+	}, [analysisData]);
 
 	const handleFileChange = e => {
 		const selectedFile = e.target.files[0];
@@ -72,13 +82,31 @@ export default function App() {
 		}
 	};
 
+	const loadMoreBonus = async () => {
+		setLoadingMore(true);
+
+		try {
+			const response = await fetch(`${API_URL}/load-more-bonus?load_with=${bonusData.length}`);
+
+			if (!response.ok) {
+				throw new Error('Ошибка получения данных с премией');
+			}
+
+			const data = await response.json();
+
+			setBonusData(prevData => [...prevData, ...data.bonus_data]);
+			setHasMoreBonus(data.has_more);
+		} catch (err) {
+			setError(err.message);
+		} finally {
+			setLoadingMore(false);
+		}
+	};
+
 	return (
 		<div className='app-container'>
 			<div className='main-content'>
-				<h1 className='main-title'>
-					<TrendingUp size={40} />
-					Анализ KPI и расчета вознаграждения
-				</h1>
+				<h1 className='main-title'>Анализ KPI и расчет вознаграждения</h1>
 
 				{/* Секция загрузки файла */}
 				<div className='card'>
@@ -142,13 +170,43 @@ export default function App() {
 							</div>
 						</div>
 
+						{/* Таблица с бонусом */}
+						<div className='card'>
+							<h2 className='card-title'>
+								<FileText size={24} />
+								Таблица с рассчитанным вознаграждением
+							</h2>
+							<div className='scroll' style={{ paddingRight: '0.25rem', maxHeight: '600px', overflowY: 'auto' }}>
+								<div className='table-container'>
+									<table className='data-table'>
+										<thead>
+											<tr>{bonusData[0] && Object.keys(bonusData[0]).map(key => <th key={key}>{key.replace(/_/g, ' ')}</th>)}</tr>
+										</thead>
+										<tbody>
+											{bonusData.map((row, idx) => (
+												<tr key={idx}>
+													{Object.values(row).map((val, i) => (
+														<td key={i}>{val !== null && val !== undefined ? String(val) : '-'}</td>
+													))}
+												</tr>
+											))}
+										</tbody>
+									</table>
+								</div>
+							</div>
+							<button onClick={loadMoreBonus} className='upload-button' style={{ marginTop: '1rem' }}>
+								Следующие 20 строк
+							</button>
+						</div>
+
 						{/* Графики по департаментам */}
 						<div className='charts-section'>
 							<h2 className='section-title'>📊 KPI сотрудников по департаментам</h2>
 
 							{analysisData.departments.map(dept => {
 								const deptData = analysisData.department_data[dept] || [];
-								const topEmployees = deptData.slice(0, 100);
+								const numberEmployees = analysisData.number_employees_by_dept[dept];
+								const topEmployees = deptData.slice(0, 25);
 
 								return (
 									<div key={dept} className='chart-card'>
@@ -190,7 +248,7 @@ export default function App() {
 
 										<div style={{ marginTop: '0rem', fontSize: '0.875rem', color: '#718096' }}>
 											<p>
-												Всего сотрудников в отделе: <strong>{deptData.length}</strong>
+												Всего сотрудников в отделе: <strong>{numberEmployees}</strong>
 											</p>
 											<p>
 												Показано топ: <strong>{topEmployees.length}</strong> сотрудников
@@ -214,33 +272,3 @@ export default function App() {
 		</div>
 	);
 }
-// function App() {
-//   const [count, setCount] = useState(0)
-
-//   return (
-//     <>
-//       <div>
-//         <a href="https://vite.dev" target="_blank">
-//           <img src={viteLogo} className="logo" alt="Vite logo" />
-//         </a>
-//         <a href="https://react.dev" target="_blank">
-//           <img src={reactLogo} className="logo react" alt="React logo" />
-//         </a>
-//       </div>
-//       <h1>Vite + React</h1>
-//       <div className="card">
-//         <button onClick={() => setCount((count) => count + 1)}>
-//           count is {count}
-//         </button>
-//         <p>
-//           Edit <code>src/App.jsx</code> and save to test HMR
-//         </p>
-//       </div>
-//       <p className="read-the-docs">
-//         Click on the Vite and React logos to learn more
-//       </p>
-//     </>
-//   )
-// }
-
-// export default App
