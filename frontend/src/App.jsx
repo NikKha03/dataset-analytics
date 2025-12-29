@@ -4,7 +4,6 @@ import { Upload, FileText, TrendingUp } from 'lucide-react';
 import './App.css';
 
 const API_URL = 'http://localhost:8080/api';
-// const API_URL = 'https://api.khalimendik.ru/api';
 
 export default function App() {
 	const [file, setFile] = useState(null);
@@ -13,8 +12,6 @@ export default function App() {
 	const [error, setError] = useState(null);
 	const [success, setSuccess] = useState(null);
 	const [bonusData, setBonusData] = useState([]);
-	const [loadingMore, setLoadingMore] = useState(false);
-	const [hasMoreBonus, setHasMoreBonus] = useState(true);
 
 	useEffect(() => {
 		if (analysisData && bonusData.length === 0) {

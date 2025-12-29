@@ -1,5 +1,7 @@
 # Инструкция по установке и запуску
 
+\*_Наборы демонстрационных данных доступны в архиве datasets.zip_
+
 ## Backend (FastAPI)
 
 ### 1. Установка зависимостей
@@ -86,3 +88,7 @@ async def upload_csv(file: UploadFile = File(...)):
 	<Bar dataKey='Performance_Rating' fill='#4f46e5' />
 </BarChart>
 ```
+
+## Демонстрация
+
+![Демонстрация](demonstration.png)
