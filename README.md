@@ -1,6 +1,8 @@
 # Инструкция по установке и запуску
 
-\*_Наборы демонстрационных данных доступны в архиве datasets.zip_
+\*_Набор собственно сгенерированных данных доступен в datasets.zip_
+
+\*_[Набор данных из kaggle](https://www.kaggle.com/datasets/rohitgrewal/hr-data-mnc?resource=download)_
 
 ## Backend (FastAPI)
 
